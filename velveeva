@@ -175,7 +175,8 @@ def doscript():
 	# 	if not check_image():
 	# 		sys.exit(1)
 
-	if len(sys.argv) < 2: usage()
+	if len(sys.argv) < 2: 
+		logo()
 
 	script_name = listget(sys.argv, 0)
 	command = listget(sys.argv, 1)
@@ -188,8 +189,11 @@ def doscript():
 		exec_init()
 	elif command == 'util':
 		exec_util(util_name, util_args)
-	else:
+	elif command == 'help':
 		usage()
+	else:
+		print "For usage and help use: " + sys.argv[0] + " help\n\n"
+		pass
 
 if __name__ == '__main__':
 	try:

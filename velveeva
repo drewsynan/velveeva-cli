@@ -1,0 +1,82 @@
+#!/usr/bin/env python2
+import sys
+import os
+
+DOCKER_IMAGE_NAME = 'velveeva'
+DOCKER_WORK_DIR = '/home/project'
+DOCKER_VELVEEVA_EXEC_DIR = '/VELVEEVA'
+
+def listget(l,idx):
+	try:
+		return l[idx]
+	except IndexError:
+		return None
+
+def check_cmd(cmd):
+	return os.system('which $%s > /dev/null 2>&1 || error 1 "$%s not found!"' %cmd) == 0
+
+def exec_docker_command(cmd, args=""):
+	arg_dict = {
+		'workdir': DOCKER_WORK_DIR,
+		'imgname': DOCKER_IMAGE_NAME,
+		'execdir': DOCKER_VELVEEVA_EXEC_DIR,
+		'cmd': cmd,
+		'args': args
+	}
+
+	cmd_string = 'eval "$(docker-machine env default)" && docker run --interactive --tty --rm --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
+	os.system(cmd_string)
+
+def exec_go():
+	exec_docker_command('go') 
+
+def exec_init():
+	exec_docker_command('init')
+
+def exec_util(util, util_args):
+	if util is None:
+		print "No util name given!"
+	elif util == "convert_pdf_to_jpg":
+		exec_docker_command('lib/convert_pdf_to_jpg.py', util_args)
+	elif util == "genctls":
+		exec_docker_command('lib/genctls.py', util_args)
+	elif util == "make_enclosing_folders":
+		exec_docker_command('lib/make_enclosing_folders.py', util_args)
+	elif util == "package_slides":
+		exec_docker_command('lib/package_slides.py', util_args)
+	elif util == "prefix":
+		exec_docker_command('lib/prefix.py', util_args)
+	elif util == "publish":
+		exec_docker_command('lib/publish.py', util_args)
+	elif util == "relink":
+		exec_docker_command('lib/relink.py', util_args)
+	else:
+		print util + ' is not a recognized Velveeva util command'
+
+
+def doscript():
+	if not check_cmd("docker") and check_cmd("docker-machine"):
+		print("docker/docker-machine not found")
+		sys.exit(1)
+
+	if not check_cmd("docker-machine active"):
+		print("No active docker-machine VM found.")
+		sys.exit(1)
+
+
+	script_name = listget(sys.argv, 0)
+	command = listget(sys.argv, 1)
+	util_name = listget(sys.argv, 2)
+	util_args = ' '.join(sys.argv[3:])
+
+	if command == 'go':
+		exec_go()
+	elif command == 'init':
+		exec_init()
+	elif command == 'util':
+		exec_util(util_name, util_args)
+	else:
+		print "USAGE MESSAGE"
+
+if __name__ == '__main__':
+	doscript()

@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 import sys
 import os
+import textwrap
 
-DOCKER_IMAGE_NAME = 'velveeva'
+DOCKER_IMAGE_NAME = 'drewsynan/velveeva'
 DOCKER_WORK_DIR = '/home/project'
 DOCKER_VELVEEVA_EXEC_DIR = '/VELVEEVA'
 
@@ -13,7 +15,106 @@ def listget(l,idx):
 		return None
 
 def check_cmd(cmd):
-	return os.system('which $%s > /dev/null 2>&1 || error 1 "$%s not found!"' %cmd) == 0
+	return os.system('which %s > /dev/null 2>&1 || exit 1' % cmd) == 0
+
+def check_running():
+	return os.system('docker-machine active 2>/dev/null 1>&1 | grep . || exit 1') == 0
+
+def check_image():
+	cmd = 'docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . || exit 1'
+	return os.system(cmd) == 0
+
+def logo():
+	banner = textwrap.dedent('''\
+
+		 _   ________ _   ___________   _____ 
+		| | / / __/ /| | / / __/ __| | / / _ |
+		| |/ / _// /_| |/ / _// _/ | |/ / __ |
+		|___/___/____|___/___/___/ |___/_/ |_|
+		                                      
+		======================================
+		An easier way to manage, maintain, and 
+		    build Veeva iRep presentations
+		======================================
+
+		''')
+
+	print banner
+
+def usage():
+	usage = textwrap.dedent('''\
+SYNOPSIS
+	%(progname)s go [options]
+	%(progname)s init
+	%(progname)s util utilname [options]
+
+DESCRIPTION
+	The combined cli utility for Velveeva.
+
+	The following options are available
+
+	go 		build the project in the current directory. See
+			go --help for more information
+
+	init 	initialize the wizard to create a new project
+
+	util 	execute a utility script
+
+	''' %{'progname': sys.argv[0]})
+
+	logo()
+	print usage
+	util_help()
+
+	sys.exit(0)
+
+def util_help():
+	banner = textwrap.dedent('''\
+UTILS
+
+	%(progname)s util convert_pdf_to_jpg source_folder dest_folder
+
+	%(progname)s util genctls 
+			--src source_folder 
+			--out output_folder 
+			--root project_root_dir 
+			--u username 
+			--pwd password
+			--email veeva_contact_email
+
+			--help (more info)
+
+	%(progname)s util make_enclosing_folders path ["glob-filter"]
+
+			--help (more info)
+
+	%(progname)s util package_slides
+			(No options. Packages all folders in 
+			 current working directory into zips)
+
+	%(progname)s util prefix prefix_string source_folder [folders]
+
+			--help (more info)
+
+	%(progname)s util publish
+			--zip path_to_zip_files
+			--ctl path_to_ctl_files
+			--host ftp_server_name
+			--u username
+			--pwd password
+
+			--help (more info)
+
+	%(progname)s util relink
+			--mv old_name new_name source_folder
+			--veev2rel source_folder [folders]
+			--rel2veev source_folder [folders]
+			--integrate_all source_folder [folders]
+			
+			--help (more info)
+		''' % {'progname': sys.argv[0]})
+
+	print banner
 
 def exec_docker_command(cmd, args=""):
 	arg_dict = {
@@ -28,14 +129,15 @@ def exec_docker_command(cmd, args=""):
 	os.system(cmd_string)
 
 def exec_go():
-	exec_docker_command('go') 
+	exec_docker_command('go', sys.argv[2:]) 
 
 def exec_init():
-	exec_docker_command('init')
+	exec_docker_command('init', sys.argv[2:])
 
 def exec_util(util, util_args):
 	if util is None:
-		print "No util name given!"
+		logo()
+		util_help()
 	elif util == "convert_pdf_to_jpg":
 		exec_docker_command('lib/convert_pdf_to_jpg.py', util_args)
 	elif util == "genctls":
@@ -43,7 +145,7 @@ def exec_util(util, util_args):
 	elif util == "make_enclosing_folders":
 		exec_docker_command('lib/make_enclosing_folders.py', util_args)
 	elif util == "package_slides":
-		exec_docker_command('lib/package_slides.py', util_args)
+		exec_docker_command('lib/package_slides.sh', util_args)
 	elif util == "prefix":
 		exec_docker_command('lib/prefix.py', util_args)
 	elif util == "publish":
@@ -52,17 +154,28 @@ def exec_util(util, util_args):
 		exec_docker_command('lib/relink.py', util_args)
 	else:
 		print util + ' is not a recognized Velveeva util command'
-
+		logo()
+		util_help()
 
 def doscript():
-	if not check_cmd("docker") and check_cmd("docker-machine"):
-		print("docker/docker-machine not found")
+	if not check_cmd("docker"):
+		print("docker not found")
 		sys.exit(1)
 
-	if not check_cmd("docker-machine active"):
-		print("No active docker-machine VM found.")
+	if not check_cmd("docker-machine"):
+		print("docker-machine not found")
 		sys.exit(1)
 
+	# if not check_running():
+	# 	print("No active docker-machine VM found.")
+	# 	sys.exit(1)
+
+	# if not check_image():
+	# 	os.system("docker pull %s" % DOCKER_IMAGE_NAME)
+	# 	if not check_image():
+	# 		sys.exit(1)
+
+	if len(sys.argv) < 2: usage()
 
 	script_name = listget(sys.argv, 0)
 	command = listget(sys.argv, 1)
@@ -76,7 +189,14 @@ def doscript():
 	elif command == 'util':
 		exec_util(util_name, util_args)
 	else:
-		print "USAGE MESSAGE"
+		usage()
 
 if __name__ == '__main__':
-	doscript()
+	try:
+		doscript()
+	except KeyboardInterrupt:
+		print u'💣 bye!'
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)

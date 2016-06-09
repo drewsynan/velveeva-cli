@@ -1,5 +1,7 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
 import sys
 import os
 import textwrap
@@ -20,10 +22,10 @@ def check_cmd(cmd):
 	return os.system('which %s > /dev/null 2>&1 || exit 1' % cmd) == 0
 
 def check_running():
-	return os.system('docker-machine active 2>/dev/null 1>&1 | grep . || exit 1') == 0
+	return os.system('eval $(docker-machine env) && docker-machine active 2>/dev/null 1>&1 | grep . || exit 1') == 0
 
 def check_image():
-	cmd = 'docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . || exit 1'
+	cmd = 'eval $(docker-machine env) && docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . || exit 1'
 	return os.system(cmd) == 0
 
 def logo():
@@ -41,7 +43,7 @@ def logo():
 
 		''')
 
-	print banner
+	print(banner)
 
 def usage():
 	usage = textwrap.dedent('''\
@@ -65,7 +67,7 @@ DESCRIPTION
 	''' %{'progname': sys.argv[0]})
 
 	logo()
-	print usage
+	print(usage)
 	util_help()
 
 	sys.exit(0)
@@ -73,52 +75,28 @@ DESCRIPTION
 def util_help():
 	banner = textwrap.dedent('''\
 UTILS
+	(For more information use: util util_name --help)
 
-	%(progname)s util convert_pdf_to_jpg source_folder dest_folder
-
-	%(progname)s util genctls 
-			--src source_folder 
-			--out output_folder 
-			--root project_root_dir 
-			--u username 
-			--pwd password
-			--email veeva_contact_email
-
-			--help (more info)
-
-	%(progname)s util make_enclosing_folders path ["glob-filter"]
-
-			--help (more info)
-
-	%(progname)s util package_slides
-			(No options. Packages all folders in 
-			 current working directory into zips)
-
-	%(progname)s util prefix prefix_string source_folder [folders]
-
-			--help (more info)
-
+	%(progname)s util assets
+	%(progname)s util build
+	%(progname)s util convert
+	%(progname)s util ctls
+	%(progname)s util folders
+	%(progname)s util package
+	%(progname)s util prefix
 	%(progname)s util publish
-			--zip path_to_zip_files
-			--ctl path_to_ctl_files
-			--host ftp_server_name
-			--u username
-			--pwd password
-
-			--help (more info)
-
 	%(progname)s util relink
-			--mv old_name new_name source_folder
-			--veev2rel source_folder [folders]
-			--rel2veev source_folder [folders]
-			--integrate_all source_folder [folders]
-			
-			--help (more info)
+	%(progname)s util rename
+	%(progname)s util screenshots
+	%(progname)s util styles
+	%(progname)s util templates
+
 		''' % {'progname': sys.argv[0]})
 
-	print banner
+	print(banner)
 
 def exec_docker_command(cmd, args=""):
+
 	arg_dict = {
 		'workdir': DOCKER_WORK_DIR,
 		'imgname': DOCKER_IMAGE_NAME,
@@ -126,10 +104,10 @@ def exec_docker_command(cmd, args=""):
 		'mem': DOCKER_MEM,
 		'swap': DOCKER_SWAP,
 		'cmd': cmd,
-		'args': args
+		'args': " ".join(args)
 	}
 
-	cmd_string = 'eval "$(docker-machine env default)" && docker run --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
+	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=utf-8" --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_generic_docker_command(cmd, args=""):
@@ -143,11 +121,11 @@ def exec_generic_docker_command(cmd, args=""):
 		'args': args
 	}
 
-	cmd_string = 'eval "$(docker-machine env default)" && docker run --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
+	cmd_string = 'eval "$(docker-machine env)" && docker run --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_go():
-	exec_docker_command('go', sys.argv[2:]) 
+	exec_docker_command('go.py', sys.argv[2:]) 
 
 def exec_init():
 	exec_docker_command('init', sys.argv[2:])
@@ -156,26 +134,38 @@ def exec_util(util, util_args):
 	if util is None:
 		logo()
 		util_help()
-	elif util == "convert_pdf_to_jpg":
-		exec_docker_command('lib/convert_pdf_to_jpg.py', util_args)
-	elif util == "genctls":
-		exec_docker_command('lib/genctls.py', util_args)
-	elif util == "make_enclosing_folders":
-		exec_docker_command('lib/make_enclosing_folders.py', util_args)
-	elif util == "package_slides":
-		exec_docker_command('lib/package_slides.sh', util_args)
+	elif util == "assets":
+		exec_docker_command('lib/assets.py', util_args)
+	elif util == "build":
+		exec_docker_command('lib/build.py', util_args)
+	elif util == "convert":
+		exec_docker_command('lib/convert.py', util_args)
+	elif util == "ctls":
+		exec_docker_command('lib/ctls.py', util_args)
+	elif util == "folders":
+		exec_docker_command('lib/folders.py', util_args)
+	elif util == "package":
+		exec_docker_command('lib/package.py', util_args)
 	elif util == "prefix":
 		exec_docker_command('lib/prefix.py', util_args)
 	elif util == "publish":
 		exec_docker_command('lib/publish.py', util_args)
 	elif util == "relink":
 		exec_docker_command('lib/relink.py', util_args)
+	elif util == "rename":
+		exec_docker_command('lib/rename.py', util_args)
+	elif util == "screenshots":
+		exec_docker_command('lib/screenshots.py', util_args)
+	elif util == "styles":
+		exec_docker_command('lib/styles.py', util_args)
 	else:
-		print util + ' is not a recognized Velveeva util command'
+		print(util + ' is not a recognized Velveeva util command')
 		logo()
 		util_help()
 
 def doscript():
+	os.system('eval "$(docker-machine env)"')
+
 	if not check_cmd("docker"):
 		print("docker not found")
 		sys.exit(1)
@@ -185,10 +175,10 @@ def doscript():
 		sys.exit(1)
 
 	if not check_running():
-		print "No active docker-machine VM found."
-		os.system('docker-machine start && eval "$(docker-machine env default)"')
+		print("No active docker-machine VM found.")
+		os.system('docker-machine start && eval "$(docker-machine env)"')
 		if not check_running():
-			print "Could not start docker machine"
+			print("Could not start docker machine")
 			sys.exit(1)
 
 	if not check_image():
@@ -215,14 +205,14 @@ def doscript():
 	elif command == 'bash':
 		exec_generic_docker_command('bash')
 	else:
-		print "For usage and help use: " + sys.argv[0] + " help\n\n"
+		print("For usage and help use: " + sys.argv[0] + " help\n\n")
 		pass
 
 if __name__ == '__main__':
 	try:
 		doscript()
 	except KeyboardInterrupt:
-		print u'💣 bye!'
+		print(u'💣 bye!')
 		try:
 			sys.exit(0)
 		except SystemExit:

@@ -10,3 +10,5 @@ After installing the requirements, run
 ```
 $ brew tap gacomm/tap && brew install velveeva-cli
 ```
+
+To use VELVEEVA run `$ velveeva` from a terminal.

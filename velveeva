@@ -164,7 +164,6 @@ def exec_util(util, util_args):
 		util_help()
 
 def doscript():
-	os.system('eval "$(docker-machine env)"')
 
 	if not check_cmd("docker"):
 		print("docker not found")
@@ -182,7 +181,7 @@ def doscript():
 			sys.exit(1)
 
 	if not check_image():
-		os.system("docker pull %s" % DOCKER_IMAGE_NAME)
+		os.system("eval $(docker-machine env) && docker pull %s" % DOCKER_IMAGE_NAME)
 		if not check_image():
 			sys.exit(1)
 

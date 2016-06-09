@@ -64,7 +64,7 @@ DESCRIPTION
 
 	util 	execute a utility script
 
-	''' %{'progname': sys.argv[0]})
+	''' %{'progname': "velveeva"})
 
 	logo()
 	print(usage)
@@ -91,7 +91,7 @@ UTILS
 	%(progname)s util styles
 	%(progname)s util templates
 
-		''' % {'progname': sys.argv[0]})
+		''' % {'progname': "velveeva"})
 
 	print(banner)
 

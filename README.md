@@ -1,1 +1,14 @@
 # velveeva-cli
+OSX command line tools for VELVEEVA
+
+# Requirements
+* [Homebrew](http://brew.sh/)
+* [Docker Toolbox](https://www.docker.com/products/docker-toolbox)
+
+# Installation
+After installing the requirements, run
+```
+$ brew tap gacomm/tap && brew install velveeva-cli
+```
+
+To use VELVEEVA run `$ velveeva` from a terminal.

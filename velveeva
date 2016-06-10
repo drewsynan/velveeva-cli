@@ -66,6 +66,8 @@ DESCRIPTION
 
 	util 	execute a utility script
 
+	update 	update to the latest utility image
+
 	''' %{'progname': PROGNAME})
 
 	logo()

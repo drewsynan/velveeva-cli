@@ -111,7 +111,7 @@ def exec_docker_command(cmd, args=""):
 		'args': " ".join(args)
 	}
 
-	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=utf-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
+	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_generic_docker_command(cmd, args=""):
@@ -125,7 +125,7 @@ def exec_generic_docker_command(cmd, args=""):
 		'args': args
 	}
 
-	cmd_string = 'eval "$(docker-machine env)" && docker run --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
+	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=\"en_US.UTF-8\"" -e "LC_CTYPE=\"en_US.UTF-8\"" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_update():
@@ -166,6 +166,8 @@ def exec_util(util, util_args):
 		exec_docker_command('lib/screenshots.py', util_args)
 	elif util == "styles":
 		exec_docker_command('lib/styles.py', util_args)
+	elif util == "templates":
+		exec_docker_command('lib/templates.py', util_args)
 	else:
 		print(util + ' is not a recognized Velveeva util command')
 		logo()

@@ -79,7 +79,7 @@ DESCRIPTION
 def util_help():
 	banner = textwrap.dedent('''\
 UTILS
-	(For more information use: util util_name --help)
+	(For more information use: velveeva util util_name --help)
 
 	%(progname)s util assets
 	%(progname)s util build
@@ -111,7 +111,7 @@ def exec_docker_command(cmd, args=""):
 		'args': " ".join(args)
 	}
 
-	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=utf-8" --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
+	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=utf-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_generic_docker_command(cmd, args=""):

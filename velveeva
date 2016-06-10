@@ -12,6 +12,8 @@ DOCKER_VELVEEVA_EXEC_DIR = '/VELVEEVA'
 DOCKER_MEM = "8G"
 DOCKER_SWAP = "8G"
 
+PROGNAME = "velveeva"
+
 def listget(l,idx):
 	try:
 		return l[idx]
@@ -22,10 +24,10 @@ def check_cmd(cmd):
 	return os.system('which %s > /dev/null 2>&1 || exit 1' % cmd) == 0
 
 def check_running():
-	return os.system('eval $(docker-machine env) && docker-machine active 2>/dev/null 1>&1 | grep . || exit 1') == 0
+	return os.system('eval $(docker-machine env) && docker-machine active 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1') == 0
 
 def check_image():
-	cmd = 'eval $(docker-machine env) && docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . || exit 1'
+	cmd = 'eval $(docker-machine env) && docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1'
 	return os.system(cmd) == 0
 
 def logo():
@@ -64,7 +66,7 @@ DESCRIPTION
 
 	util 	execute a utility script
 
-	''' %{'progname': "velveeva"})
+	''' %{'progname': PROGNAME})
 
 	logo()
 	print(usage)
@@ -91,7 +93,7 @@ UTILS
 	%(progname)s util styles
 	%(progname)s util templates
 
-		''' % {'progname': "velveeva"})
+		''' % {'progname': PROGNAME})
 
 	print(banner)
 
@@ -122,6 +124,10 @@ def exec_generic_docker_command(cmd, args=""):
 	}
 
 	cmd_string = 'eval "$(docker-machine env)" && docker run --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
+	os.system(cmd_string)
+
+def exec_update():
+	cmd_string = 'eval $(docker-machine env) && docker pull %(imagename)s' % DOCKER_IMAGE_NAME
 	os.system(cmd_string)
 
 def exec_go():
@@ -199,12 +205,14 @@ def doscript():
 		exec_init()
 	elif command == 'util':
 		exec_util(util_name, util_args)
+	elif command == 'update':
+		exec_update()
 	elif command == 'help':
 		usage()
 	elif command == 'bash':
 		exec_generic_docker_command('bash')
 	else:
-		print("For usage and help use: " + sys.argv[0] + " help\n\n")
+		print("For usage and help use: " + PROGNAME + " help\n\n")
 		pass
 
 if __name__ == '__main__':

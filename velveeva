@@ -24,10 +24,10 @@ def check_cmd(cmd):
 	return os.system('which %s > /dev/null 2>&1 || exit 1' % cmd) == 0
 
 def check_running():
-	return os.system('eval $(docker-machine env) && docker-machine active 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1') == 0
+	return os.system('docker info > /dev/null 2>&1') == 0
 
 def check_image():
-	cmd = 'eval $(docker-machine env) && docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1'
+	cmd = 'docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1'
 	return os.system(cmd) == 0
 
 def logo():
@@ -111,7 +111,7 @@ def exec_docker_command(cmd, args=""):
 		'args': " ".join(args)
 	}
 
-	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
+	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_generic_docker_command(cmd, args=""):
@@ -125,11 +125,11 @@ def exec_generic_docker_command(cmd, args=""):
 		'args': args
 	}
 
-	cmd_string = 'eval "$(docker-machine env)" && docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=\"en_US.UTF-8\"" -e "LC_CTYPE=\"en_US.UTF-8\"" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
+	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=\"en_US.UTF-8\"" -e "LC_CTYPE=\"en_US.UTF-8\"" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
 	os.system(cmd_string)
 
 def exec_update():
-	cmd_string = 'eval $(docker-machine env) && docker pull %s' % DOCKER_IMAGE_NAME
+	cmd_string = 'docker pull %s' % DOCKER_IMAGE_NAME
 	os.system(cmd_string)
 
 def exec_go():
@@ -179,19 +179,15 @@ def doscript():
 		print("docker not found")
 		sys.exit(1)
 
-	if not check_cmd("docker-machine"):
-		print("docker-machine not found")
-		sys.exit(1)
-
 	if not check_running():
-		print("No active docker-machine VM found.")
-		os.system('docker-machine start && eval "$(docker-machine env)"')
+		print("Could not connect to Docker daemon.")
+		os.system('docker start')
 		if not check_running():
-			print("Could not start docker machine")
+			print("Could not start docker.")
 			sys.exit(1)
 
 	if not check_image():
-		os.system("eval $(docker-machine env) && docker pull %s" % DOCKER_IMAGE_NAME)
+		os.system("docker pull %s" % DOCKER_IMAGE_NAME)
 		if not check_image():
 			sys.exit(1)
 

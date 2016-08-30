@@ -1,5 +1,5 @@
 # velveeva-cli
-OSX and Linux VELVEEVA command line tools.
+VELVEEVA command line tools for OSX and Linux.
 
 # Requirements
 * Native Linux/OSX [Docker](https://www.docker.com/products/docker) App
@@ -24,4 +24,4 @@ Copy the `velveeva` script to somewhere in your path, like `/usr/local/bin`
 $ sudo cp velveeva /usr/local/bin/velveeva
 ```
 
-To use VELVEEVA run `$sudo velveeva` from a terminal. (Sudo is required on Linux to start the docker image VELVEEVA uses)
+To use VELVEEVA run `$ sudo velveeva` from a terminal. (Sudo is required on Linux to start the Docker image velveeva-cli uses).

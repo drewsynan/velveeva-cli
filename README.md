@@ -25,3 +25,6 @@ $ sudo cp velveeva /usr/local/bin/velveeva
 ```
 
 To use VELVEEVA run `$ sudo velveeva` from a terminal. (Sudo is required on Linux to start the Docker image velveeva-cli uses internally).
+
+# Updating the utility image
+To update the internal utility image velveeva-cli uses to the latest version of VELVEEVA run `$ velveeva update` (OSX) or `$ sudo velveeva update` (Linux)

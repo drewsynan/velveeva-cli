@@ -1,5 +1,5 @@
 # velveeva-cli
-VELVEEVA command line tools for OSX and Linux.
+[VELVEEVA](http://www.github.com/gacomm/velveeva) command line tools for OSX and Linux.
 
 # Requirements
 * Native Linux/OSX [Docker](https://www.docker.com/products/docker) App

@@ -4,15 +4,16 @@ from __future__ import print_function
 
 import sys
 import os
-import textwrap
+import subprocess
 
 DOCKER_IMAGE_NAME = 'drewsynan/velveeva'
 DOCKER_WORK_DIR = '/home/project'
 DOCKER_VELVEEVA_EXEC_DIR = '/VELVEEVA'
-DOCKER_MEM = "8G"
-DOCKER_SWAP = "8G"
-
+DOCKER_MEM = "1G"
+DOCKER_SWAP = "1G"
 PROGNAME = "velveeva"
+
+VELVEEVA_CLI_VERSION = 0.7
 
 def listget(l,idx):
 	try:
@@ -27,200 +28,90 @@ def check_running():
 	return os.system('docker info > /dev/null 2>&1') == 0
 
 def check_image():
-	cmd = 'docker images -q drewsynan/velveeva 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1'
+	cmd = 'docker images -q %s 2>/dev/null 1>&1 | grep . 1>/dev/null || exit 1' % DOCKER_IMAGE_NAME
 	return os.system(cmd) == 0
 
-def logo():
-	banner = textwrap.dedent('''\
-		--------------------------------------
-		 _   ________ _   ___________   _____ 
-		| | / / __/ /| | / / __/ __| | / / _ |
-		| |/ / _// /_| |/ / _// _/ | |/ / __ |
-		|___/___/____|___/___/___/ |___/_/ |_|
-		                                      
-		======================================
-		An easier way to manage, maintain, and 
-		    build Veeva iRep presentations
-		======================================
+def image_version():
+	cmd = 'docker inspect --format="{{.RepoDigests}}" %s' % DOCKER_IMAGE_NAME
+	image_sha = subprocess.check_output(cmd, shell=True)
 
-		''')
+	print("[VELVEEVA-cli]\n")
 
-	print(banner)
+	print("cli version: %s" % VELVEEVA_CLI_VERSION)
+	print("docker image sha: %s" % image_sha)
 
-def usage():
-	usage = textwrap.dedent('''\
-SYNOPSIS
-	%(progname)s go [options]
-	%(progname)s init
-	%(progname)s util utilname [options]
+	return 0
 
-DESCRIPTION
-	The combined cli utility for Velveeva.
-
-	The following options are available
-
-	go 		build the project in the current directory. See
-			go --help for more information
-
-	init 	initialize the wizard to create a new project
-
-	util 	execute a utility script
-
-	update 	update to the latest utility image
-
-	''' %{'progname': PROGNAME})
-
-	logo()
-	print(usage)
-	util_help()
-
-	sys.exit(0)
-
-def util_help():
-	banner = textwrap.dedent('''\
-UTILS
-	(For more information use: velveeva util util_name --help)
-
-	%(progname)s util assets
-	%(progname)s util build
-	%(progname)s util convert
-	%(progname)s util ctls
-	%(progname)s util folders
-	%(progname)s util package
-	%(progname)s util prefix
-	%(progname)s util publish
-	%(progname)s util relink
-	%(progname)s util rename
-	%(progname)s util screenshots
-	%(progname)s util styles
-	%(progname)s util templates
-
-		''' % {'progname': PROGNAME})
-
-	print(banner)
-
-def exec_docker_command(cmd, args=""):
-
+def exec_docker(cmd, args=[]):
 	arg_dict = {
 		'workdir': DOCKER_WORK_DIR,
 		'imgname': DOCKER_IMAGE_NAME,
-		'execdir': DOCKER_VELVEEVA_EXEC_DIR,
 		'mem': DOCKER_MEM,
 		'swap': DOCKER_SWAP,
 		'cmd': cmd,
 		'args': " ".join(args)
 	}
 
-	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8"  --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(execdir)s/%(cmd)s %(args)s' % arg_dict
-	os.system(cmd_string)
+	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
+	process = subprocess.Popen(
+    	[cmd_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+	)
 
-def exec_generic_docker_command(cmd, args=""):
-	arg_dict = {
-		'workdir': DOCKER_WORK_DIR,
-		'imgname': DOCKER_IMAGE_NAME,
-		'execdir': DOCKER_VELVEEVA_EXEC_DIR,
-		'mem': DOCKER_MEM,
-		'swap': DOCKER_SWAP,
-		'cmd': cmd,
-		'args': args
-	}
+	while True:
+	    out = process.stdout.read(1)
+	    err = process.stderr.read(1)
+	    if out == '' and process.poll() != None:
+	        break
+	    if out != '':
+	        sys.stdout.write(out)
+	        sys.stdout.flush()
+	    if err != '':
+	    	sys.stderr.write(err)
+	    	sys.stderr.flush()
 
-	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=\"en_US.UTF-8\"" -e "LC_CTYPE=\"en_US.UTF-8\"" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
-	os.system(cmd_string)
+	return process.returncode
 
 def exec_update():
 	cmd_string = 'docker pull %s' % DOCKER_IMAGE_NAME
-	os.system(cmd_string)
-
-def exec_go():
-	exec_docker_command('go.py', sys.argv[2:]) 
-
-def exec_init():
-	exec_docker_command('init', sys.argv[2:])
-
-def exec_util(util, util_args):
-	if util is None:
-		logo()
-		util_help()
-	elif util == "assets":
-		exec_docker_command('lib/assets.py', util_args)
-	elif util == "build":
-		exec_docker_command('lib/build.py', util_args)
-	elif util == "convert":
-		exec_docker_command('lib/convert.py', util_args)
-	elif util == "ctls":
-		exec_docker_command('lib/ctls.py', util_args)
-	elif util == "folders":
-		exec_docker_command('lib/folders.py', util_args)
-	elif util == "package":
-		exec_docker_command('lib/package.py', util_args)
-	elif util == "prefix":
-		exec_docker_command('lib/prefix.py', util_args)
-	elif util == "publish":
-		exec_docker_command('lib/publish.py', util_args)
-	elif util == "relink":
-		exec_docker_command('lib/relink.py', util_args)
-	elif util == "rename":
-		exec_docker_command('lib/rename.py', util_args)
-	elif util == "screenshots":
-		exec_docker_command('lib/screenshots.py', util_args)
-	elif util == "styles":
-		exec_docker_command('lib/styles.py', util_args)
-	elif util == "templates":
-		exec_docker_command('lib/templates.py', util_args)
-	else:
-		print(util + ' is not a recognized Velveeva util command')
-		logo()
-		util_help()
+	return os.system(cmd_string)
 
 def doscript():
 
 	if not check_cmd("docker"):
-		print("docker not found")
-		sys.exit(1)
+		sys.stderr.write("velveeva: docker not found")
+		return 1
 
 	if not check_running():
-		print("Could not connect to Docker daemon.")
+		sys.stderr.write("velveeva: could not connect to Docker daemon.\n")
 		os.system('docker start')
 		if not check_running():
-			print("Could not start docker.")
-			sys.exit(1)
+			sys.stderr.write("velveeva: could not start docker.\n")
+			return 1
 
 	if not check_image():
 		os.system("docker pull %s" % DOCKER_IMAGE_NAME)
 		if not check_image():
-			sys.exit(1)
-
-	if len(sys.argv) < 2: 
-		logo()
-
-	script_name = listget(sys.argv, 0)
+			sys.stderr.write("velveeva: could not load utility docker image\n")
+			return 1
+	
 	command = listget(sys.argv, 1)
-	util_name = listget(sys.argv, 2)
-	util_args = ' '.join(sys.argv[3:])
 
-	if command == 'go':
-		exec_go()
-	elif command == 'init':
-		exec_init()
-	elif command == 'util':
-		exec_util(util_name, util_args)
-	elif command == 'update':
-		exec_update()
-	elif command == 'help':
-		usage()
-	elif command == 'bash':
-		exec_generic_docker_command('bash')
-	else:
-		print("For usage and help use: " + PROGNAME + " help\n\n")
-		pass
+	commands = {
+		'bash': lambda: exec_docker('bash'),
+		'version': image_version,
+		'update': exec_update,
+		'quote': lambda: exec_docker(sys.argv[2:])
+	}
+	default_command = lambda: exec_docker(os.path.join(DOCKER_VELVEEVA_EXEC_DIR, 'cli.py'), sys.argv[1:])
+
+	return commands.get(command, default_command)()
 
 if __name__ == '__main__':
 	try:
-		doscript()
+		sys.exit(doscript())
 	except KeyboardInterrupt:
 		print(u'💣 bye!')
 		try:
-			sys.exit(0)
+			sys.exit(1)
 		except SystemExit:
-			os._exit(0)
+			os._exit(1)

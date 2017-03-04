@@ -53,21 +53,23 @@ def exec_docker(cmd, args=[]):
 	}
 
 	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
-	process = subprocess.Popen(
-    	[cmd_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-	)
+	process = subprocess.Popen([cmd_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
 	while True:
-	    out = process.stdout.read(1)
-	    err = process.stderr.read(1)
-	    if out == '' and process.poll() != None:
-	        break
-	    if out != '':
-	        sys.stdout.write(out)
-	        sys.stdout.flush()
-	    if err != '':
-	    	sys.stderr.write(err)
-	    	sys.stderr.flush()
+		try:
+			out = process.stdout.read(1).decode('utf-8')
+		except KeyboardInterrupt:
+			sys.stdout.write("\n")
+			return 1
+
+		if out == '' and process.poll() != None:
+			for err in process.stderr.readlines():
+				sys.stdout.write(err.decode('utf-8'))
+			sys.stderr.flush()
+			break
+		if out != '':
+			sys.stdout.write(out)
+			sys.stdout.flush()
 
 	return process.returncode
 

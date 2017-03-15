@@ -25,6 +25,37 @@ def listget(l,idx):
 	except IndexError:
 		return None
 
+def maybe_multibyte(stream):
+	# todo: handle unicode BOM
+	b0 = stream.read(1)
+	if not len(b0): return ''
+
+	# from https://en.wikipedia.org/wiki/UTF-8#Description
+	ONE_BYTE     = 0b00000000
+	TWO_BYTES    = 0b11000000
+	THREE_BYTES  = 0b11100000
+	FOUR_BYTES   = 0b11110000
+	MAX          = 0b11110111
+
+	multibyte = False
+	char = b0
+	first_byte = int(b0.encode('hex'), 16)
+
+	if first_byte < TWO_BYTES:
+		pass
+	elif first_byte < THREE_BYTES:
+		multibyte = True
+		char = char + stream.read(1)
+	elif first_byte < FOUR_BYTES:
+		multibyte = True
+		char = char + stream.read(2)
+	elif first_byte < MAX:
+		multibyte = True
+		char = char + stream.read(3)
+
+	decoded = char.decode('utf-8')
+	return decoded
+
 def check_cmd(cmd):
 	return os.system('which %s > /dev/null 2>&1 || exit 1' % cmd) == 0
 
@@ -40,7 +71,6 @@ def image_version():
 	image_sha = subprocess.check_output(cmd, shell=True)
 
 	print("[VELVEEVA-cli]\n")
-
 	print("cli version: %s" % VELVEEVA_CLI_VERSION)
 	print("docker image sha: %s" % image_sha)
 
@@ -49,17 +79,16 @@ def image_version():
 def exec_docker(cmd, args=[]):
 	#TODO: use process.communicate()
 
-	arg_dict = {
+	params = {
 		'pwd' : os.getcwd(),
 		'workdir': DOCKER_WORK_DIR,
 		'imgname': DOCKER_IMAGE_NAME,
 		'mem': DOCKER_MEM,
 		'swap': DOCKER_SWAP,
-		'cmd': cmd,
-		'args': " ".join(args)
+		'cmd': cmd
 	}
 
-	cmd_list = [
+	full_command = [
 		'docker',
 		'run', 
 		'-e', '"PYTHONIOENCODING=UTF-8"',
@@ -69,50 +98,19 @@ def exec_docker(cmd, args=[]):
 		'--interactive',
 		'--tty',
 		'--rm',
-		'--memory=4096M',
+		'--memory=%(mem)s' % params,
 		'--memory-swap=-1',
-		'--volume', '%(pwd)s:%(workdir)s' % arg_dict,
-		'--workdir', '%(workdir)s' % arg_dict,
-		'%(imgname)s' % arg_dict,
-		'%(cmd)s' % arg_dict,
+		'--volume', '%(pwd)s:%(workdir)s' % params,
+		'--workdir', '%(workdir)s' % params,
+		'%(imgname)s' % params,
+		'%(cmd)s' % params,
 		] + args
 	
-	process = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	process = subprocess.Popen(full_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	
 	while True:
 		try:
-			def maybe_multibyte(b0, stream):
-				# todo: handle unicode BOM
-				if not len(b0): return ''
-
-				# from https://en.wikipedia.org/wiki/UTF-8#Description
-				ONE_BYTE     = 0b00000000
-				TWO_BYTES    = 0b11000000
-				THREE_BYTES  = 0b11100000
-				FOUR_BYTES   = 0b11110000
-				MAX          = 0b11110111
-
-				multibyte = False
-				char = b0
-				first_byte = int(b0.encode('hex'), 16)
-
-				if first_byte < TWO_BYTES:
-					pass
-				elif first_byte < THREE_BYTES:
-					multibyte = True
-					char = char + stream.read(1)
-				elif first_byte < FOUR_BYTES:
-					multibyte = True
-					char = char + stream.read(2)
-				elif first_byte < MAX:
-					multibyte = True
-					char = char + stream.read(3)
-
-				decoded = char.decode('utf-8')
-				return decoded
-
-			out = maybe_multibyte(process.stdout.read(1), process.stdout)
-
+			out = maybe_multibyte(process.stdout)
 		except KeyboardInterrupt:
 			sys.stdout.write("\n")
 			return 1

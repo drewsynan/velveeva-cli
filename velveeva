@@ -3,8 +3,12 @@
 from __future__ import print_function
 
 import sys
+import codecs
 import os
 import subprocess
+import binascii
+
+sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
 DOCKER_IMAGE_NAME = 'drewsynan/velveeva'
 DOCKER_WORK_DIR = '/home/project'
@@ -43,7 +47,10 @@ def image_version():
 	return 0
 
 def exec_docker(cmd, args=[]):
+	#TODO: use process.communicate()
+
 	arg_dict = {
+		'pwd' : os.getcwd(),
 		'workdir': DOCKER_WORK_DIR,
 		'imgname': DOCKER_IMAGE_NAME,
 		'mem': DOCKER_MEM,
@@ -52,12 +59,60 @@ def exec_docker(cmd, args=[]):
 		'args': " ".join(args)
 	}
 
-	cmd_string = 'docker run -e "PYTHONIOENCODING=UTF-8" -e "LC_ALL=en_US.UTF-8" -e "LC_CTYPE=en_US.UTF-8" --privileged --interactive --tty --rm --memory=4096M --memory-swap=-1 --volume "$PWD":%(workdir)s --workdir %(workdir)s %(imgname)s %(cmd)s %(args)s' % arg_dict
-	process = subprocess.Popen([cmd_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
+	cmd_list = [
+		'docker',
+		'run', 
+		'-e', '"PYTHONIOENCODING=UTF-8"',
+		'-e', '"LC_ALL=en_US.UTF-8"',
+		'-e', '"LC_CTYPE=en_US.UTF-8"',
+		'--privileged',
+		'--interactive',
+		'--tty',
+		'--rm',
+		'--memory=4096M',
+		'--memory-swap=-1',
+		'--volume', '%(pwd)s:%(workdir)s' % arg_dict,
+		'--workdir', '%(workdir)s' % arg_dict,
+		'%(imgname)s' % arg_dict,
+		'%(cmd)s' % arg_dict,
+		] + args
+	
+	process = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	
 	while True:
 		try:
-			out = process.stdout.read(1).decode('utf-8')
+			def maybe_multibyte(b0, stream):
+				# todo: handle unicode BOM
+				if not len(b0): return ''
+
+				# from https://en.wikipedia.org/wiki/UTF-8#Description
+				ONE_BYTE     = 0b00000000
+				TWO_BYTES    = 0b11000000
+				THREE_BYTES  = 0b11100000
+				FOUR_BYTES   = 0b11110000
+				MAX          = 0b11110111
+
+				multibyte = False
+				char = b0
+				first_byte = int(b0.encode('hex'), 16)
+
+				if first_byte < TWO_BYTES:
+					pass
+				elif first_byte < THREE_BYTES:
+					multibyte = True
+					char = char + stream.read(1)
+				elif first_byte < FOUR_BYTES:
+					multibyte = True
+					char = char + stream.read(2)
+				elif first_byte < MAX:
+					multibyte = True
+					char = char + stream.read(3)
+
+				decoded = char.decode('utf-8')
+				return decoded
+
+			out = maybe_multibyte(process.stdout.read(1), process.stdout)
+
 		except KeyboardInterrupt:
 			sys.stdout.write("\n")
 			return 1

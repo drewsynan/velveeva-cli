@@ -17,7 +17,7 @@ DOCKER_MEM = "1G"
 DOCKER_SWAP = "1G"
 PROGNAME = "velveeva"
 
-VELVEEVA_CLI_VERSION = "1.1.1"
+VELVEEVA_CLI_VERSION = "1.1.2"
 
 def listget(l,idx):
 	try:
